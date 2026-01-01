@@ -24,11 +24,28 @@ bind=0.0.0.0
 # Route all traffic through Tor SOCKS proxy
 proxy=tor:9050
 
-# Only connect to .onion peers (maximum privacy)
-onlynet=onion
+# TOR-ONLY MODE vs HYBRID MODE
+# =============================================================================
+# HYBRID MODE (default - faster initial sync):
+#   - Uses Tor proxy for all connections
+#   - Can connect to both clearnet and .onion peers
+#   - Recommended for initial blockchain sync (much faster)
+#   - Your real IP is still hidden behind Tor
+#
+# TOR-ONLY MODE (maximum privacy after sync):
+#   - Only connects to .onion peers
+#   - Slower peer discovery and sync
+#   - Comment out the hybrid settings below and uncomment Tor-only settings
+# =============================================================================
 
-# Allow DNS seeds for initial peer discovery
+# --- HYBRID MODE (active by default) ---
+# Allow both clearnet (via Tor) and onion connections
 dnsseed=1
+
+# --- TOR-ONLY MODE (uncomment after initial sync for max privacy) ---
+# Only connect to .onion peers
+#onlynet=onion
+#dnsseed=0
 
 # Advertise our P2P hidden service address
 # NOTE: This will be set automatically after first run
