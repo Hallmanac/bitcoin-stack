@@ -29,6 +29,7 @@ tor-data/
 # These contain secrets from .env
 config/bitcoin.conf
 config/lnd.conf
+config/electrs.toml
 config/torrc
 
 # Keep templates
@@ -91,3 +92,4 @@ tmp/
 temp/
 *.tmp
 *.temp
+.claude/settings.local.json

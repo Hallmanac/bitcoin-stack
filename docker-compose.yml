@@ -1,6 +1,6 @@
 # =============================================================================
 # Bitcoin Stack - Docker Compose Configuration
-# Bitcoin Knots + LND + Tor
+# Bitcoin Knots + LND + Electrs + Tor
 # =============================================================================
 #
 # Usage:
@@ -44,8 +44,10 @@ services:
       - BITCOIN_P2P_PORT=${BITCOIN_P2P_PORT:-8333}
       - LND_GRPC_PORT=${LND_GRPC_PORT:-10009}
       - LND_REST_PORT=${LND_REST_PORT:-8080}
+      - ELECTRS_PORT=${ELECTRS_PORT:-50001}
       - BITCOIND_IP=172.28.0.3
       - LND_IP=172.28.0.4
+      - ELECTRS_IP=172.28.0.5
     volumes:
       - ${DATA_DIR:-./data}/tor:/var/lib/tor
     healthcheck:
@@ -97,8 +99,8 @@ services:
       test: ["CMD", "bitcoin-cli", "-rpcuser=${BITCOIN_RPC_USER:-bitcoinrpc}", "-rpcpassword=${BITCOIN_RPC_PASS}", "getblockchaininfo"]
       interval: 60s
       timeout: 30s
-      retries: 3
-      start_period: 120s
+      retries: 20
+      start_period: 600s
 
   # ---------------------------------------------------------------------------
   # LND - Lightning Network Daemon
@@ -171,3 +173,45 @@ services:
       timeout: 30s
       retries: 3
       start_period: 180s
+
+  # ---------------------------------------------------------------------------
+  # Electrs - Electrum Server
+  # ---------------------------------------------------------------------------
+  electrs:
+    build:
+      context: ./docker/electrs
+      args:
+        ELECTRS_VERSION: ${ELECTRS_VERSION:-0.10.6}
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: electrs
+    restart: unless-stopped
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+    networks:
+      bitcoin_network:
+        ipv4_address: 172.28.0.5
+    ports:
+      # Electrum TCP - localhost only
+      - "127.0.0.1:${ELECTRS_PORT:-50001}:${ELECTRS_PORT:-50001}"
+    volumes:
+      # Electrs index database
+      - ${DATA_DIR:-./data}/electrs:/home/electrs/db
+      # Config file (contains auth credentials)
+      - ./config/electrs.toml:/etc/electrs/config.toml:ro
+    command:
+      - electrs
+      - --conf=/etc/electrs/config.toml
+      - --network=${ELECTRS_NETWORK:-bitcoin}
+      - --daemon-rpc-addr=bitcoind:${BITCOIN_RPC_PORT:-8332}
+      - --daemon-p2p-addr=bitcoind:${BITCOIN_P2P_PORT:-8333}
+      - --electrum-rpc-addr=0.0.0.0:${ELECTRS_PORT:-50001}
+    mem_limit: ${ELECTRS_MEM_LIMIT:-4g}
+    mem_reservation: ${ELECTRS_MEM_RESERVATION:-1g}
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 ${ELECTRS_PORT:-50001}"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 300s

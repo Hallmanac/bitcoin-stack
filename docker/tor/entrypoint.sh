@@ -6,10 +6,12 @@ BITCOIN_RPC_PORT=${BITCOIN_RPC_PORT:-8332}
 BITCOIN_P2P_PORT=${BITCOIN_P2P_PORT:-8333}
 LND_GRPC_PORT=${LND_GRPC_PORT:-10009}
 LND_REST_PORT=${LND_REST_PORT:-8080}
+ELECTRS_PORT=${ELECTRS_PORT:-50001}
 
 # Static IPs for services (must match docker-compose network config)
 BITCOIND_IP=${BITCOIND_IP:-172.28.0.3}
 LND_IP=${LND_IP:-172.28.0.4}
+ELECTRS_IP=${ELECTRS_IP:-172.28.0.5}
 
 # Generate torrc configuration
 generate_torrc() {
@@ -54,6 +56,11 @@ HiddenServiceDir /var/lib/tor/lnd_rest
 HiddenServiceVersion 3
 HiddenServicePort ${LND_REST_PORT} ${LND_IP}:${LND_REST_PORT}
 
+# Electrs Hidden Service (for Sparrow and other Electrum-compatible wallets)
+HiddenServiceDir /var/lib/tor/electrs
+HiddenServiceVersion 3
+HiddenServicePort ${ELECTRS_PORT} ${ELECTRS_IP}:${ELECTRS_PORT}
+
 # -----------------------------------------------------------------------------
 # Performance & Security
 # -----------------------------------------------------------------------------
@@ -68,7 +75,7 @@ EOF
 
 # Create hidden service directories with proper permissions
 setup_hidden_services() {
-    for dir in bitcoin_rpc bitcoin_p2p lnd_grpc lnd_rest; do
+    for dir in bitcoin_rpc bitcoin_p2p lnd_grpc lnd_rest electrs; do
         mkdir -p "/var/lib/tor/${dir}"
         chown tor:tor "/var/lib/tor/${dir}"
         chmod 700 "/var/lib/tor/${dir}"

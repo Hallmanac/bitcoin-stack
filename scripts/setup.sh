@@ -110,8 +110,14 @@ fi
 mkdir -p "$DATA_DIR/bitcoin"
 mkdir -p "$DATA_DIR/lnd"
 mkdir -p "$DATA_DIR/tor"
+mkdir -p "$DATA_DIR/electrs"
 
 echo -e "${GREEN}Data directories created at: $DATA_DIR${NC}"
+
+# -----------------------------------------------------------------------------
+# Ensure config directory exists
+# -----------------------------------------------------------------------------
+mkdir -p "$PROJECT_DIR/config"
 
 # -----------------------------------------------------------------------------
 # Generate config files from templates
@@ -130,6 +136,10 @@ echo "Generated config/bitcoin.conf"
 # Generate lnd.conf (mostly static, but process anyway)
 cp config/lnd.conf.template config/lnd.conf
 echo "Generated config/lnd.conf"
+
+# Generate electrs.toml
+envsubst < config/electrs.toml.template > config/electrs.toml
+echo "Generated config/electrs.toml"
 
 echo -e "${GREEN}Configuration files generated.${NC}"
 
