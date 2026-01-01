@@ -94,8 +94,14 @@ if ($dataDir.StartsWith("./")) {
 New-Item -ItemType Directory -Force -Path "$dataDir/bitcoin" | Out-Null
 New-Item -ItemType Directory -Force -Path "$dataDir/lnd" | Out-Null
 New-Item -ItemType Directory -Force -Path "$dataDir/tor" | Out-Null
+New-Item -ItemType Directory -Force -Path "$dataDir/electrs" | Out-Null
 
 Write-Host "Data directories created at: $dataDir" -ForegroundColor Green
+
+# -----------------------------------------------------------------------------
+# Ensure config directory exists
+# -----------------------------------------------------------------------------
+New-Item -ItemType Directory -Force -Path "$ProjectDir/config" | Out-Null
 
 # -----------------------------------------------------------------------------
 # Generate config files from templates
@@ -122,6 +128,15 @@ Write-Host "Generated config/bitcoin.conf"
 # Copy lnd.conf template (mostly static)
 Copy-Item "config/lnd.conf.template" "config/lnd.conf"
 Write-Host "Generated config/lnd.conf"
+
+# Generate electrs.toml from template
+$electrsTemplate = Get-Content "config/electrs.toml.template" -Raw
+foreach ($key in $envVars.Keys) {
+    $electrsTemplate = $electrsTemplate -replace "\`$\{$key\}", $envVars[$key]
+    $electrsTemplate = $electrsTemplate -replace "\`$$key", $envVars[$key]
+}
+Set-Content "config/electrs.toml" $electrsTemplate
+Write-Host "Generated config/electrs.toml"
 
 Write-Host "Configuration files generated." -ForegroundColor Green
 

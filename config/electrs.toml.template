@@ -1,0 +1,17 @@
+# =============================================================================
+# Electrs Configuration
+# Generated from template - DO NOT EDIT DIRECTLY
+# Modify .env and run setup script to regenerate
+# =============================================================================
+
+# Bitcoin RPC authentication (must be in config file, not command line)
+auth = "${BITCOIN_RPC_USER}:${BITCOIN_RPC_PASS}"
+
+# Index database directory
+db_dir = "/home/electrs/db"
+
+# Logging level
+log_filters = "INFO"
+
+# Index batch size (higher = faster sync, more memory)
+index_batch_size = 100
