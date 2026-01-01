@@ -1,0 +1,91 @@
+# =============================================================================
+# Bitcoin Knots Configuration
+# Generated from template - DO NOT EDIT DIRECTLY
+# Modify .env and run setup script to regenerate
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# NETWORK
+# -----------------------------------------------------------------------------
+# Run on mainnet (set to 0 and uncomment testnet/signet for other networks)
+mainnet=1
+#testnet=1
+#signet=1
+
+# Accept incoming connections
+listen=1
+
+# Bind to all interfaces (within Docker network)
+bind=0.0.0.0
+
+# -----------------------------------------------------------------------------
+# TOR CONFIGURATION
+# -----------------------------------------------------------------------------
+# Route all traffic through Tor SOCKS proxy
+proxy=tor:9050
+
+# Only connect to .onion peers (maximum privacy)
+onlynet=onion
+
+# Allow DNS seeds for initial peer discovery
+dnsseed=1
+
+# Advertise our P2P hidden service address
+# NOTE: This will be set automatically after first run
+# externalip=YOUR_P2P_ONION_ADDRESS.onion
+
+# -----------------------------------------------------------------------------
+# RPC SERVER
+# -----------------------------------------------------------------------------
+# Enable JSON-RPC server
+server=1
+
+# RPC credentials
+rpcuser=${BITCOIN_RPC_USER}
+rpcpassword=${BITCOIN_RPC_PASS}
+
+# Bind RPC to all interfaces (within Docker network)
+rpcbind=0.0.0.0
+
+# Allow RPC connections from Docker networks and localhost
+rpcallowip=127.0.0.1
+rpcallowip=10.0.0.0/8
+rpcallowip=172.16.0.0/12
+rpcallowip=192.168.0.0/16
+
+# RPC port
+rpcport=${BITCOIN_RPC_PORT}
+
+# -----------------------------------------------------------------------------
+# ZMQ NOTIFICATIONS (for LND)
+# -----------------------------------------------------------------------------
+zmqpubrawblock=tcp://0.0.0.0:28332
+zmqpubrawtx=tcp://0.0.0.0:28333
+zmqpubhashblock=tcp://0.0.0.0:28334
+
+# -----------------------------------------------------------------------------
+# PERFORMANCE
+# -----------------------------------------------------------------------------
+# Database cache size in MB (RAM usage for UTXO cache)
+dbcache=${BITCOIN_DBCACHE}
+
+# Maximum peer connections
+maxconnections=${BITCOIN_MAXCONNECTIONS}
+
+# Maximum mempool size in MB
+maxmempool=300
+
+# -----------------------------------------------------------------------------
+# STORAGE
+# -----------------------------------------------------------------------------
+# Pruning: 0 = disabled (full node), or MB to keep
+prune=${BITCOIN_PRUNE}
+
+# Transaction index (required for some wallets, adds ~30GB)
+txindex=${BITCOIN_TXINDEX}
+
+# -----------------------------------------------------------------------------
+# WALLET
+# -----------------------------------------------------------------------------
+# Disable built-in wallet (we use LND for Lightning)
+disablewallet=1

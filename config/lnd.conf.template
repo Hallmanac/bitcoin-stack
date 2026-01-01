@@ -1,0 +1,35 @@
+# =============================================================================
+# LND Configuration
+# Generated from template - DO NOT EDIT DIRECTLY
+# Most settings are passed via command line in docker-compose.yml
+# This file contains additional options not set via CLI
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# APPLICATION OPTIONS
+# -----------------------------------------------------------------------------
+# Maximum pending channels
+maxpendingchannels=3
+
+# -----------------------------------------------------------------------------
+# DATABASE
+# -----------------------------------------------------------------------------
+db.backend=bolt
+db.batch-commit-interval=500ms
+
+# -----------------------------------------------------------------------------
+# CHANNEL DEFAULTS
+# -----------------------------------------------------------------------------
+# Default confirmations for channel funding
+bitcoin.defaultchanconfs=3
+
+# Base fee in milli-satoshis
+bitcoin.basefee=1000
+
+# Fee rate in ppm (parts per million)
+bitcoin.feerate=10
+
+# -----------------------------------------------------------------------------
+# CACHES
+# -----------------------------------------------------------------------------
+caches.channel-cache-size=35000

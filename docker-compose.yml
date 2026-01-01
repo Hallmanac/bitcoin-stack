@@ -1,0 +1,173 @@
+# =============================================================================
+# Bitcoin Stack - Docker Compose Configuration
+# Bitcoin Knots + LND + Tor
+# =============================================================================
+#
+# Usage:
+#   1. Copy .env.example to .env and configure
+#   2. Run: docker compose up -d
+#
+# =============================================================================
+
+networks:
+  bitcoin_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  lnd_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/lnd
+
+services:
+  # ---------------------------------------------------------------------------
+  # Tor - Privacy proxy and hidden services
+  # ---------------------------------------------------------------------------
+  tor:
+    build:
+      context: ./docker/tor
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: tor
+    restart: unless-stopped
+    networks:
+      bitcoin_network:
+        ipv4_address: 172.28.0.2
+    environment:
+      - BITCOIN_RPC_PORT=${BITCOIN_RPC_PORT:-8332}
+      - BITCOIN_P2P_PORT=${BITCOIN_P2P_PORT:-8333}
+      - LND_GRPC_PORT=${LND_GRPC_PORT:-10009}
+      - LND_REST_PORT=${LND_REST_PORT:-8080}
+      - BITCOIND_IP=172.28.0.3
+      - LND_IP=172.28.0.4
+    volumes:
+      - ${DATA_DIR:-./data}/tor:/var/lib/tor
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9050"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  # ---------------------------------------------------------------------------
+  # Bitcoin Knots - Full node
+  # ---------------------------------------------------------------------------
+  bitcoind:
+    build:
+      context: ./docker/bitcoin-knots
+      args:
+        BITCOIN_VERSION: ${BITCOIN_VERSION:-29.1.knots20250903}
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: bitcoind
+    restart: unless-stopped
+    depends_on:
+      tor:
+        condition: service_started
+    networks:
+      bitcoin_network:
+        ipv4_address: 172.28.0.3
+    ports:
+      # RPC - localhost only for security
+      - "127.0.0.1:${BITCOIN_RPC_PORT:-8332}:${BITCOIN_RPC_PORT:-8332}"
+    volumes:
+      # Main Bitcoin data directory
+      - ${DATA_DIR:-./data}/bitcoin:/home/bitcoin/.bitcoin
+      # Optional: Separate blocks directory (if BITCOIN_BLOCKS_DIR is set)
+      - ${BITCOIN_BLOCKS_DIR:-${DATA_DIR:-./data}/bitcoin/blocks}:/home/bitcoin/.bitcoin/blocks
+      # Tor data for cookie auth (read-only)
+      - ${DATA_DIR:-./data}/tor:/var/lib/tor:ro
+      # Config file
+      - ./config/bitcoin.conf:/tmp/bitcoin.conf:ro
+    environment:
+      - BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+    command:
+      - bitcoind
+      - -conf=/home/bitcoin/.bitcoin/bitcoin.conf
+      - -datadir=/home/bitcoin/.bitcoin
+    mem_limit: ${BITCOIN_MEM_LIMIT:-8g}
+    mem_reservation: ${BITCOIN_MEM_RESERVATION:-4g}
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-rpcuser=${BITCOIN_RPC_USER:-bitcoinrpc}", "-rpcpassword=${BITCOIN_RPC_PASS}", "getblockchaininfo"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  # ---------------------------------------------------------------------------
+  # LND - Lightning Network Daemon
+  # ---------------------------------------------------------------------------
+  lnd:
+    build:
+      context: ./docker/lnd
+      args:
+        LND_VERSION: ${LND_VERSION:-v0.18.3-beta}
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: lnd
+    restart: unless-stopped
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+      tor:
+        condition: service_started
+    networks:
+      bitcoin_network:
+        ipv4_address: 172.28.0.4
+    ports:
+      # gRPC - localhost only
+      - "127.0.0.1:${LND_GRPC_PORT:-10009}:${LND_GRPC_PORT:-10009}"
+      # REST - localhost only
+      - "127.0.0.1:${LND_REST_PORT:-8080}:${LND_REST_PORT:-8080}"
+    volumes:
+      - lnd_data:/home/lnd/.lnd
+      # Tor data for cookie auth (read-only)
+      - ${DATA_DIR:-./data}/tor:/var/lib/tor:ro
+      # Config file
+      - ./config/lnd.conf:/tmp/lnd.conf:ro
+    command:
+      - lnd
+      - --configfile=/home/lnd/.lnd/lnd.conf
+      # Bitcoin connection
+      - --bitcoin.active
+      - --bitcoin.${BITCOIN_NETWORK:-mainnet}
+      - --bitcoin.node=bitcoind
+      - --bitcoind.rpchost=bitcoind:${BITCOIN_RPC_PORT:-8332}
+      - --bitcoind.rpcuser=${BITCOIN_RPC_USER:-bitcoinrpc}
+      - --bitcoind.rpcpass=${BITCOIN_RPC_PASS}
+      - --bitcoind.zmqpubrawblock=tcp://bitcoind:28332
+      - --bitcoind.zmqpubrawtx=tcp://bitcoind:28333
+      # Tor configuration
+      - --tor.active
+      - --tor.socks=tor:9050
+      - --tor.control=tor:9051
+      - --tor.v3
+      - --tor.streamisolation
+      # Listeners
+      - --listen=0.0.0.0:${LND_P2P_PORT:-9735}
+      - --rpclisten=0.0.0.0:${LND_GRPC_PORT:-10009}
+      - --restlisten=0.0.0.0:${LND_REST_PORT:-8080}
+      # Node identity
+      - --alias=${LND_ALIAS:-MyLightningNode}
+      - --color=${LND_COLOR:-#FF6600}
+      # Protocol options
+      - --accept-amp
+      - --protocol.wumbo-channels
+      - --protocol.option-scid-alias
+      - --protocol.zero-conf
+      # Logging
+      - --debuglevel=${LND_DEBUG_LEVEL:-info}
+    mem_limit: ${LND_MEM_LIMIT:-2g}
+    mem_reservation: ${LND_MEM_RESERVATION:-512m}
+    healthcheck:
+      test: ["CMD", "lncli", "getinfo"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 180s
