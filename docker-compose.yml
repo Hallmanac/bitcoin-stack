@@ -99,8 +99,8 @@ services:
       test: ["CMD", "bitcoin-cli", "-rpcuser=${BITCOIN_RPC_USER:-bitcoinrpc}", "-rpcpassword=${BITCOIN_RPC_PASS}", "getblockchaininfo"]
       interval: 60s
       timeout: 30s
-      retries: 3
-      start_period: 120s
+      retries: 20
+      start_period: 600s
 
   # ---------------------------------------------------------------------------
   # LND - Lightning Network Daemon
